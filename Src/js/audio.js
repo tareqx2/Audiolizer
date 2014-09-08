@@ -1,5 +1,2 @@
-function init() {
-// Fix up prefixing
-  window.AudioContext = window.AudioContext || window.webkitAudioContext;
-  context = new AudioContext();
-}
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
+var context = new AudioContext();
