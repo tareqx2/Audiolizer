@@ -1,49 +1,166 @@
-<script src="../node_modules/jquery/dist/jquery.min.js"></script>
-<script src="../node_modules/three/three.min.js"></script>
+<script src="/jquery/dist/jquery.min.js"></script>
+<script src="/three/three.min.js"></script>
+<script src="/js/audio.js"></script>
+<script src="/js/AudioLoader.js"></script>
 
 <script>
+
+var context;
+window.requestAnimFrame = (function(){
+return  window.requestAnimationFrame       || 
+  window.webkitRequestAnimationFrame || 
+  window.mozRequestAnimationFrame    || 
+  window.oRequestAnimationFrame      || 
+  window.msRequestAnimationFrame     || 
+  function( callback ){
+  window.setTimeout(callback, 1000 / 60);
+};
+})();
+
 window.onload = function any_function_name()
 {
-    var scene, camera, renderer;
-    var geometry, material, mesh;
+	context = new (window.AudioContext || window.webkitAudioContext)();
 
-    init();
-    animate();
+	var audioBuffer = new BufferLoader(context,["/music/inception.mp3","/music/lux.mp3"],alertDone);
+	audioBuffer.load();
 
-    function init() {
+	var audio = new AudioVisualizer(context);
 
-        scene = new THREE.Scene();
+	document.querySelector('#playButton').addEventListener('click', function() {
+  		audio.Play();
+	});
 
-        camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
-        camera.position.z = 1000;
-
-        geometry = new THREE.BoxGeometry( 200, 200, 200 );
-        material = new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true } );
-
-        mesh = new THREE.Mesh( geometry, material );
-        scene.add( mesh );
-
-        renderer = new THREE.CanvasRenderer();
-        renderer.setSize( window.innerWidth, window.innerHeight );
-
-        document.body.appendChild( renderer.domElement );
-
-    }
-
-    function animate() {
-
-        requestAnimationFrame( animate );
-
-        mesh.rotation.x += 0.01;
-        mesh.rotation.y += 0.02;
-
-        renderer.render( scene, camera );
-
-    }
+}
+function alertDone(bufferList){
+	for (var i = 0; i < bufferList.length; i++) {
+		context["buffer"] = bufferList[i];
+	}
 }
 </script>
 <html>
-<body>
-	<button>test</button>
+<body style="background-color:#AAA;">
+</br></br></br>
+	<button id="playButton">play/pause</button>
+	<script src="three/three.min.js"></script>
+	<script src="js/stats.js"></script>
+
+	<script>
+
+			var container, stats;
+
+			var camera, scene, renderer;
+
+			var geometry, group;
+
+			var mouseX = 0, mouseY = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+			init();
+			animate();
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 5000;
+
+				scene = new THREE.Scene();
+
+				var geometry = new THREE.CubeGeometry( 40, 2, 100 );
+				var material = new THREE.MeshNormalMaterial( { overdraw: 0.5 } );
+
+				group = new THREE.Object3D();
+
+				for ( var i = 0; i < 255; i ++ ) {
+
+					var mesh = new THREE.Mesh( geometry, material );
+					mesh.position.x = i*40-5000;
+					if(i%2==0)
+						mesh.position.x-=40;
+
+					mesh.position.y = 0;
+					mesh.position.z = 0;
+					mesh.rotation.x = 0;
+					mesh.rotation.y = 0;
+					mesh.matrixAutoUpdate = true;
+					group.add( mesh );
+
+				}
+
+				scene.add( group );
+
+				renderer = new THREE.CanvasRenderer();
+				renderer.setClearColor( 0xAAAAAA );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				stats.domElement.style.zIndex = 100;
+				container.appendChild( stats.domElement );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function addBin(bin,value){
+
+				scene.__objectsAdded[bin].scale.y = value/4;
+			}
+
+			function onWindowResize() {
+
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function onDocumentMouseMove(event) {
+				mouseX = ( event.clientX - windowHalfX ) * 10;
+				mouseY = ( event.clientY - windowHalfY ) * 10;
+
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+				stats.update();
+
+			}
+
+			function render() {
+
+				camera.position.x += ( mouseX - camera.position.x ) * .05;
+				camera.position.y += ( - mouseY - camera.position.y ) * .05;
+				camera.lookAt( scene.position );
+
+				var currentSeconds = Date.now();
+				//group.rotation.x = Math.sin( currentSeconds * 0.0007 ) * 0.5;
+				//group.rotation.y = Math.sin( currentSeconds * 0.0003 ) * 0.5;
+				//group.rotation.z = Math.sin( currentSeconds * 0.0002 ) * 0.5;
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
 </body>
 </html>
