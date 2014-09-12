@@ -2,15 +2,15 @@ var WIDTH = 640;
 var HEIGHT = 360;
 
 // Interesting parameters to tweak!
-var SMOOTHING = 0.8;
+var SMOOTHING = 0.3;
 var FFT_SIZE = 512;
 
 function AudioVisualizer(context){
 	this.context = context;
 	this.analyser = context.createAnalyser();
  	this.analyser.connect(context.destination);
- 	this.analyser.minDecibels = -140;
-	this.analyser.maxDecibels = 0;
+ 	this.analyser.minDecibels = -90;
+	this.analyser.maxDecibels = -10;
 	this.freqs = new Uint8Array(this.analyser.frequencyBinCount);
 	this.times = new Uint8Array(this.analyser.frequencyBinCount);
 
@@ -28,9 +28,15 @@ AudioVisualizer.prototype.Play = function(){
     	this.isPlaying = false;
 	}
 	else{
+
+		var filter = this.context.createBiquadFilter();
+		filter.type = "lowpass";
+
 		this.startTime = this.context.currentTime;
 		this.source = this.context.createBufferSource();
 		this.source.connect(this.analyser);
+		this.source.connect(filter);
+		filter.connect(this.context.destination);
 		//var buffer = this.context.createBuffer(2, 1024, this.context.sampleRate);
 	    this.source.buffer = this.context.buffer;
 	    this.source.loop = true;
@@ -51,12 +57,14 @@ AudioVisualizer.prototype.draw = function() {
   this.analyser.getByteTimeDomainData(this.times);
 
   var width = Math.floor(1/this.freqs.length, 10);
-
+  
   /*var canvas = document.querySelector('canvas');
   var drawContext = canvas.getContext('2d');
   canvas.width = WIDTH;
   canvas.height = HEIGHT;*/
   // Draw the frequency domain chart.
+  var weightedValue = 0;
+
   for (var i = 0; i < this.analyser.frequencyBinCount; i++) {
     var value = this.freqs[i];
     var percent = value / 256;
@@ -64,21 +72,21 @@ AudioVisualizer.prototype.draw = function() {
     var offset = HEIGHT - height - 1;
     var barWidth = WIDTH/this.analyser.frequencyBinCount;
     var hue = i/this.analyser.frequencyBinCount * 360;
-
-    addBin(i,value);
+    weightedValue+=(i*value);
+    if(mode=="bar")
+    	addBin(i,value);
     //drawContext.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
     //drawContext.fillRect(i * barWidth, offset, barWidth, height);
   }
-
+  //console.log(weightedValue);
+  setWeightedValue(weightedValue*3);
   // Draw the time domain chart.
   for (var i = 0; i < this.analyser.frequencyBinCount; i++) {
-/*    var value = this.times[i];
+    var value = this.times[i];
     var percent = value / 256;
     var height = HEIGHT * percent;
     var offset = HEIGHT - height - 1;
     var barWidth = WIDTH/this.analyser.frequencyBinCount;
-    drawContext.fillStyle = 'white';
-    drawContext.fillRect(i * barWidth, offset, 1, 2);*/
   }
 
   if (this.isPlaying) {
