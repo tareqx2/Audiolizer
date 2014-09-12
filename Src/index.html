@@ -2,10 +2,12 @@
 <script src="/three/three.min.js"></script>
 <script src="/js/audio.js"></script>
 <script src="/js/AudioLoader.js"></script>
+<script src="/js/tween.js"></script>
 
 <script>
 
 var context;
+var mode = "particle";
 window.requestAnimFrame = (function(){
 return  window.requestAnimationFrame       || 
   window.webkitRequestAnimationFrame || 
@@ -21,13 +23,21 @@ window.onload = function any_function_name()
 {
 	context = new (window.AudioContext || window.webkitAudioContext)();
 
-	var audioBuffer = new BufferLoader(context,["/music/inception.mp3","/music/lux.mp3"],alertDone);
+	var audioBuffer = new BufferLoader(context,["/music/Excision.wav"],alertDone);
 	audioBuffer.load();
 
 	var audio = new AudioVisualizer(context);
 
 	document.querySelector('#playButton').addEventListener('click', function() {
   		audio.Play();
+	});
+	document.querySelector('#bars').addEventListener('click',function(){
+			initBarEqualizer();
+			mode = "bar";
+	});
+	document.querySelector('#particles').addEventListener('click',function(){
+			initParticleEqualizer();
+			mode="particle";
 	});
 
 }
@@ -40,6 +50,15 @@ function alertDone(bufferList){
 <html>
 <body style="background-color:#AAA;">
 </br></br></br>
+<ul>
+	<li>
+		<button id="bars">Bars</button>
+	</li>
+	<li>
+		<button id="particles">Particles</button>
+	</li>
+</ul>
+
 	<button id="playButton">play/pause</button>
 	<script src="three/three.min.js"></script>
 	<script src="js/stats.js"></script>
@@ -47,7 +66,7 @@ function alertDone(bufferList){
 	<script>
 
 			var container, stats;
-
+			var freqValue = 0;
 			var camera, scene, renderer;
 
 			var geometry, group;
@@ -59,15 +78,20 @@ function alertDone(bufferList){
 
 			document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 
-			init();
+			container = document.createElement( 'div' );
+			document.body.appendChild( container );
+
+			initParticleEqualizer();
 			animate();
 
-			function init() {
 
-				container = document.createElement( 'div' );
-				document.body.appendChild( container );
+			function initBarEqualizer() {
 
-				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+
+				while (container.firstChild) {
+				    container.removeChild(container.firstChild);
+				}
+				camera = new THREE.PerspectiveCamera( 100, window.innerWidth / window.innerHeight, 1, 10000 );
 				camera.position.z = 5000;
 
 				scene = new THREE.Scene();
@@ -98,6 +122,7 @@ function alertDone(bufferList){
 				renderer = new THREE.CanvasRenderer();
 				renderer.setClearColor( 0xAAAAAA );
 				renderer.setSize( window.innerWidth, window.innerHeight );
+
 				container.appendChild( renderer.domElement );
 
 				stats = new Stats();
@@ -110,6 +135,42 @@ function alertDone(bufferList){
 
 				window.addEventListener( 'resize', onWindowResize, false );
 
+			}
+
+			function initParticleEqualizer() {
+
+				while (container.firstChild) {
+				    container.removeChild(container.firstChild);
+				}
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 500000 );
+				camera.position.z = 1000;
+
+				scene = new THREE.Scene();
+
+				var material = new THREE.SpriteMaterial( {
+					map: new THREE.Texture( generateSprite() ),
+					blending: THREE.AdditiveBlending
+				} );
+
+				for ( var i = 0; i < 255; i++ ) {
+
+					particle = new THREE.Sprite( material );
+
+					initParticle( particle, i * 10 );
+
+					scene.add( particle );
+				}
+
+				renderer = new THREE.CanvasRenderer();
+				renderer.setClearColor( 0xAAAAAA );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				stats.domElement.style.zIndex = 100;
+				container.appendChild( stats.domElement );
 			}
 
 			function addBin(bin,value){
@@ -125,7 +186,7 @@ function alertDone(bufferList){
 				camera.aspect = window.innerWidth / window.innerHeight;
 				camera.updateProjectionMatrix();
 
-				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setSize( window.innerWidth, window.innerHeight*3 );
 
 			}
 
@@ -134,6 +195,88 @@ function alertDone(bufferList){
 				mouseY = ( event.clientY - windowHalfY ) * 10;
 
 			}
+
+			function generateSprite() {
+
+				var canvas = document.createElement( 'canvas' );
+				canvas.width = 16;
+				canvas.height = 16;
+
+				var context = canvas.getContext( '2d' );
+				var gradient = context.createRadialGradient( canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2 );
+				gradient.addColorStop( 0, 'rgba(0,0,0,1)' );
+				gradient.addColorStop( 0.2, 'rgba(0,0,0,1)' );
+				gradient.addColorStop( 0.4, 'rgba(0,0,64,1)' );
+				gradient.addColorStop( 1, 'rgba(0,0,0,1)' );
+
+				context.fillStyle = gradient;
+				context.fillRect( 0, 0, canvas.width, canvas.height );
+
+				return canvas;
+
+			}
+
+			function dec2hex(d,padding) {
+			        var hex = Number(d).toString(16);
+					padding = typeof (padding) === "undefined" || padding === null ? padding = 2 : padding;
+
+					while (hex.length < padding) {
+					    hex = "0" + hex;
+					}
+
+					return hex;
+			}
+
+			function initParticle( particle, delay ) {
+
+				var particle = this instanceof THREE.Sprite ? this : particle;
+				var delay = delay !== undefined ? delay : 0;
+
+				var canvas = document.createElement( 'canvas' );
+				canvas.width = 16;
+				canvas.height = 16;
+
+				var context = canvas.getContext( '2d' );
+				var gradient = context.createRadialGradient( canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2 );
+				gradient.addColorStop( 0, '#'+dec2hex(freqValue,6) );
+				gradient.addColorStop( 0.2, '#'+dec2hex(freqValue,6));
+				gradient.addColorStop( 0.4, '#'+dec2hex(freqValue,6));
+				gradient.addColorStop( 1, 'rgba(0,0,0,1)' );
+
+				context.fillStyle = gradient;
+				context.fillRect( 0, 0, canvas.width, canvas.height );
+
+
+				var material = new THREE.SpriteMaterial( {
+					map: new THREE.Texture( canvas ),
+					blending: THREE.AdditiveBlending
+				} );
+				particle.material = material;
+				particle.position.set( 0, 0, 0 )
+				particle.scale.x = particle.scale.y = Math.random() * 320 + 16;
+
+				new TWEEN.Tween( particle )
+					.delay( delay )
+					.to( {}, 1000 )
+					.onComplete( initParticle )
+					.start();
+
+				new TWEEN.Tween( particle.position )
+					.delay( delay )
+					.to( { x: Math.random() * 9000 - 2000, y: Math.random() * 3000 - 500, z: Math.random() * 9000 - 2000 }, 1000 )
+					.start();
+
+				new TWEEN.Tween( particle.scale )
+					.delay( delay )
+					.to( { x: 0, y: 0 }, 10000 )
+					.start();
+
+			}
+
+			function setWeightedValue(value){
+				freqValue = value;
+			}
+
 
 			//
 
@@ -147,6 +290,8 @@ function alertDone(bufferList){
 			}
 
 			function render() {
+
+				TWEEN.update();
 
 				camera.position.x += ( mouseX - camera.position.x ) * .05;
 				camera.position.y += ( - mouseY - camera.position.y ) * .05;
